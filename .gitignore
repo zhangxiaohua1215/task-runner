@@ -1,5 +1,7 @@
 upload/
 
+cmd/*.exe
+
 tmp/
 
 ./test.db
