@@ -1,1 +1,5 @@
 upload/
+
+tmp/
+
+./test.db
