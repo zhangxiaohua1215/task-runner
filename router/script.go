@@ -8,5 +8,8 @@ func (r *ScriptRouter) RegisterScriptRouter(e *gin.Engine) {
 	api := e.Group("/script")
 	{
 		api.POST("/upload", appController.UploadScript)
+		api.POST("/list", appController.ListScript)
+		api.POST("/detail", appController.DetailScript)
+
 	}
 }

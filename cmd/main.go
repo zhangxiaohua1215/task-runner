@@ -1,4 +1,4 @@
-//go:generate go build -o wc5s.exe main.go
+//go:generate go build -o wc10s.exe main.go
 package main
 
 import (
@@ -25,7 +25,7 @@ func main() {
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "reading standard input:", err)
 	}
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	fmt.Println("wordcount:", wordCount)
 

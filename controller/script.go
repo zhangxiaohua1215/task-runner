@@ -2,11 +2,15 @@ package controller
 
 import (
 	"net/http"
+	"path/filepath"
 	"strconv"
+	"task-runner/gobal"
+	"task-runner/gobal/response"
 	"task-runner/model"
 	"task-runner/utils"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type Script struct{}
@@ -49,6 +53,7 @@ func (s *Script) UploadScript(c *gin.Context) {
 	script = &model.Script{
 		ID:          id,
 		Name:        file.Filename,
+		Ext:         filepath.Ext(file.Filename),
 		Path:        path,
 		Hash:        hash,
 		Description: description,
@@ -56,4 +61,63 @@ func (s *Script) UploadScript(c *gin.Context) {
 	appService.Script.Create(script)
 
 	c.JSON(200, gin.H{"script_id": script.ID})
+}
+
+// 脚本列表
+func (s *Script) ListScript(c *gin.Context) {
+	type Req struct {
+		PageSize  int
+		Page      int
+		Ext       string
+		Name      string
+		SortField string
+		SortOrder string
+	}
+	var req Req
+	err := c.BindJSON(&req)
+	if err != nil {
+		response.Fail(c, "参数绑定错误", err.Error())
+		return
+	}
+
+	if req.PageSize == 0 {
+		req.PageSize = 10
+	}
+	if req.Page == 0 {
+		req.Page = 1
+	}
+
+	scripts, cnt, err := appService.Script.List(req.Page, req.PageSize, req.Ext, req.Name, req.SortField, req.SortOrder)
+	if err != nil {
+		response.Fail(c, "", err.Error())
+		return
+	}
+	response.Success(c, "", response.PageResult{
+		List:     scripts,
+		Total:    cnt,
+		Page:     req.Page,
+		PageSize: req.PageSize,
+	})
+}
+
+// 脚本详情
+// TODO: 过滤返回的字段；支持预览文件
+func (s *Script) DetailScript(c *gin.Context) {
+	id := c.PostForm("script_id")
+	scriptID, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		response.Fail(c, "脚本id解析错误", err.Error())
+		return
+	}
+	var script model.Script
+	err = gobal.DB.First(&script, scriptID).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			response.Fail(c, "脚本id不存在", err.Error())
+			return
+		}
+		response.Fail(c, "", err.Error())
+		return
+	}
+	response.Success(c, "", script)
 }

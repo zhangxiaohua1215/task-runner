@@ -28,11 +28,29 @@ func (t *Task) Complete(taskID int64, status TaskStatus, stdout []byte, exitCode
 	gobal.DB.Model(&model.Task{ID: taskID}).Updates(map[string]any{
 		"status":       status,
 		"completed_at": time.Now(),
-		"std_out":      stdout,
+		"output":      stdout,
+
 		"exit_code":    exitCode,
 	})
 }
 
-func (t *Task) Create(task *model.Task) {
-	gobal.DB.Create(&task)
+// 任务列表
+func (t *Task) List(pageNum, pageSize int, status, sortField, sortOrder string) (tasks []model.Task, cnt int64, err error) {
+	db := gobal.DB.Model(&tasks)
+	if status!= "" {
+		db = db.Where("status = ?", status)
+	}
+	err = db.Count(&cnt).Error
+	if err!= nil {
+		return nil, 0, err
+	}
+	if sortField == "" {
+		sortField = "id"
+	}
+	if sortOrder == "" {
+		sortOrder = "desc"
+	}
+
+	err = db.Order(sortField + " " + sortOrder).Limit(pageSize).Offset((pageNum - 1) * pageSize).Find(&tasks).Error
+	return tasks, cnt, err
 }

@@ -14,7 +14,7 @@ type Task struct {
 	Arguments []string
 	FilePath  string
 	Ext       string
-	StdIn     []byte
+	Input     string
 	// 输出参数
 	// StartedAt   time.Time
 	// CompletedAt time.Time
@@ -62,7 +62,7 @@ func worker() {
 		// 更新任务状态为正在执行
 		service.AppServiceGroup.Start(t.ID)
 
-		stdout, exeCode := executor.Execute(t.FilePath, t.Arguments, t.StdIn)
+		stdout, exeCode := executor.Execute(t.FilePath, t.Arguments, []byte(t.Input))
 
 		status := service.TaskStatusCompleted
 		if exeCode != 0 {
