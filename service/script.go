@@ -1,37 +1,31 @@
 package service
 
 import (
+	"task-runner/gobal"
 	"task-runner/model"
-
-	"gorm.io/gorm"
 )
 
-type ScriptService struct {
-	db *gorm.DB
+type Script struct {
 }
 
-func NewScriptService(db *gorm.DB) *ScriptService {
-	return &ScriptService{db: db}
+func (s *Script) Create(script *model.Script) {
+	gobal.DB.Create(&script)
 }
 
-func (s *ScriptService) Create(script *model.Script) {
-	s.db.Create(&script)
-}
-
-func (s *ScriptService) Find(id int64) *model.Script {
+func (s *Script) Find(id int64) *model.Script {
 	var script model.Script
-	err := s.db.First(&script, id).Error
-	if err!= nil {
+	err := gobal.DB.First(&script, id).Error
+	if err != nil {
 		return nil
 	}
 
 	return &script
 }
 
-func (s *ScriptService) FindByHash(hash string) *model.Script {
+func (s *Script) FindByHash(hash string) *model.Script {
 	var script model.Script
-	err := s.db.Where("hash =?", hash).First(&script).Error
-	if err!= nil {
+	err := gobal.DB.Where("hash =?", hash).First(&script).Error
+	if err != nil {
 		return nil
 	}
 	return &script

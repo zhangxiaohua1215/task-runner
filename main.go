@@ -8,9 +8,8 @@ import (
 )
 
 func main() {
-	r := gin.Default()
-	router.RegisterRouter(r)
 	gin.ForceConsoleColor()
+	r := router.Init()
 	job.RunWorker(3)
 	r.Run(":8080")
 }

@@ -1,4 +1,4 @@
-package handler
+package controller
 
 import (
 	"fmt"
@@ -7,18 +7,17 @@ import (
 	"strings"
 	"task-runner/job"
 	"task-runner/model"
-	"task-runner/service"
 	"task-runner/utils"
 
 	"github.com/gin-gonic/gin"
 )
 
-type TaskHandler struct{}
+type Task struct{}
 
 // 执行任务
-func (t *TaskHandler) ExecuteTask(c *gin.Context) {
+func (t *Task) ExecuteTask(c *gin.Context) {
 	id := c.PostForm("script_id")
-	
+
 	arg := c.PostFormArray("arg")
 	name := c.PostForm("name")
 	stdin := c.PostForm("stdin")
@@ -40,9 +39,9 @@ func (t *TaskHandler) ExecuteTask(c *gin.Context) {
 		Status:    "pending",
 		StdIn:     []byte(stdin),
 	}
-	service.TaskServiceInstance.Create(&task)
+	appService.Task.Create(&task)
 
-	script := service.ScriptServiceInstance.Find(scriptID)
+	script := appService.Script.Find(scriptID)
 	// 加入任务队列
 	job.TaskQueue <- job.Task{
 		ID:        task.ID,

@@ -1,19 +1,18 @@
-package handler
+package controller
 
 import (
 	"net/http"
 	"strconv"
 	"task-runner/model"
-	"task-runner/service"
 	"task-runner/utils"
 
 	"github.com/gin-gonic/gin"
 )
 
-type ScriptHandler struct{}
+type Script struct{}
 
 // 上传脚本文件
-func (s *ScriptHandler) UploadScript(c *gin.Context) {
+func (s *Script) UploadScript(c *gin.Context) {
 	file, _ := c.FormFile("file")
 	description := c.PostForm("description")
 	// 检查脚本是否存在，存在则返回已存在的脚本ID
@@ -27,11 +26,11 @@ func (s *ScriptHandler) UploadScript(c *gin.Context) {
 	}
 
 	// 存在
-	script := service.ScriptServiceInstance.FindByHash(hash)
+	script := appService.Script.FindByHash(hash)
 	if script != nil {
 		c.JSON(200, gin.H{
 			"script_id": script.ID,
-			"msg": "脚本已存在",
+			"msg":       "脚本已存在",
 		})
 		return
 	}
@@ -54,7 +53,7 @@ func (s *ScriptHandler) UploadScript(c *gin.Context) {
 		Hash:        hash,
 		Description: description,
 	}
-	service.ScriptServiceInstance.Create(script)
+	appService.Script.Create(script)
 
 	c.JSON(200, gin.H{"script_id": script.ID})
 }

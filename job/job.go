@@ -22,8 +22,22 @@ type Task struct {
 	// ExitedCode int
 }
 
-type ScriptExecutor interface {
+type Executor interface {
 	Execute(scriptPath string, args []string, stdin []byte) (stdout []byte, exitCode int)
+}
+
+func NewExecutor(ext string) Executor {
+	switch ext {
+	case ".py":
+		return nil
+	case ".sh":
+		return nil
+	case ".exe":
+		return &exeExecutor{}
+	case ".ps1":
+		return nil
+	}
+	return nil
 }
 
 type exeExecutor struct{}
@@ -44,20 +58,10 @@ func (e *exeExecutor) Execute(scriptPath string, args []string, stdin []byte) (s
 
 func worker() {
 	for t := range TaskQueue {
+		executor := NewExecutor(t.Ext)
 		// 更新任务状态为正在执行
-		service.TaskServiceInstance.Start(t.ID)
+		service.AppServiceGroup.Start(t.ID)
 
-		var executor ScriptExecutor
-		switch t.Ext {
-		case ".py":
-			// 执行 Python 脚本
-		case ".sh":
-			// 执行 Shell 脚本
-		case ".exe":
-			executor = &exeExecutor{}
-		case ".ps1":
-			// 执行 PowerShell 脚本
-		}
 		stdout, exeCode := executor.Execute(t.FilePath, t.Arguments, t.StdIn)
 
 		status := service.TaskStatusCompleted
@@ -66,7 +70,7 @@ func worker() {
 		}
 
 		// 更新任务状态为已完成
-		service.TaskServiceInstance.Complete(t.ID, status, stdout, exeCode)
+		service.AppServiceGroup.Complete(t.ID, status, stdout, exeCode)
 	}
 }
 
