@@ -20,6 +20,19 @@ func (s *ScriptService) Create(script *model.Script) {
 
 func (s *ScriptService) Find(id int64) *model.Script {
 	var script model.Script
-	s.db.First(&script, id)
+	err := s.db.First(&script, id).Error
+	if err!= nil {
+		return nil
+	}
+
+	return &script
+}
+
+func (s *ScriptService) FindByHash(hash string) *model.Script {
+	var script model.Script
+	err := s.db.Where("hash =?", hash).First(&script).Error
+	if err!= nil {
+		return nil
+	}
 	return &script
 }

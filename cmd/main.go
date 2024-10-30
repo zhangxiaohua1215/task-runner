@@ -1,3 +1,4 @@
+//go:generate go build -o wc5s.exe main.go
 package main
 
 import (
