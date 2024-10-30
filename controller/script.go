@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -101,7 +102,6 @@ func (s *Script) ListScript(c *gin.Context) {
 }
 
 // 脚本详情
-// TODO: 过滤返回的字段；支持预览文件
 func (s *Script) DetailScript(c *gin.Context) {
 	id := c.PostForm("script_id")
 	scriptID, err := strconv.ParseInt(id, 10, 64)
@@ -109,8 +109,8 @@ func (s *Script) DetailScript(c *gin.Context) {
 		response.Fail(c, "脚本id解析错误", err.Error())
 		return
 	}
-	var script model.Script
-	err = gobal.DB.First(&script, scriptID).Error
+	var script model.ScriptWithUrl
+	err = gobal.DB.Model(&model.Script{}).First(&script, scriptID).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			response.Fail(c, "脚本id不存在", err.Error())
@@ -119,5 +119,28 @@ func (s *Script) DetailScript(c *gin.Context) {
 		response.Fail(c, "", err.Error())
 		return
 	}
+	// 生成下载链接
+	script.Url = genDownloadUrl(c.Request.Host, script.ID)
 	response.Success(c, "", script)
+}
+
+// 下载脚本文件
+func (s *Script) DownloadScript(c *gin.Context) {
+	id := c.Param("id")
+	scriptID, err := strconv.ParseInt(id, 16, 64)
+	if err != nil {
+		response.Fail(c, "脚本id解析错误", err.Error())
+		return
+	}
+	script := appService.Script.First(scriptID)
+	if script == nil {
+		response.Fail(c, "脚本id不存在", )
+		return
+	}
+
+	c.File(script.Path)
+}
+
+func genDownloadUrl(hostName string, id int64) string {
+	return fmt.Sprintf("%s/download/%x", hostName, id)
 }

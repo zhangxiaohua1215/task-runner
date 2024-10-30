@@ -44,7 +44,7 @@ func (t *Task) ExecuteTask(c *gin.Context) {
 	}
 	gobal.DB.Create(&task)
 
-	script := appService.Script.Find(scriptID)
+	script := appService.Script.First(scriptID)
 	// 加入任务队列
 	job.TaskQueue <- job.Task{
 		ID:        task.ID,
@@ -103,8 +103,8 @@ func (t *Task) DetailTask(c *gin.Context) {
 		response.Fail(c, "任务id解析错误", err)
 		return
 	}
-	var task model.Task
-	err = gobal.DB.Joins("Script").First(&task, taskID).Error
+	var task model.TaskDetail
+	err = gobal.DB.Model(&model.Task{}).Joins("Script").First(&task, taskID).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			response.Fail(c, "任务id不存在", err)

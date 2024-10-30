@@ -12,7 +12,7 @@ func (s *Script) Create(script *model.Script) {
 	gobal.DB.Create(&script)
 }
 
-func (s *Script) Find(id int64) *model.Script {
+func (s *Script) First(id int64) *model.Script {
 	var script model.Script
 	err := gobal.DB.First(&script, id).Error
 	if err != nil {
@@ -52,9 +52,6 @@ func (s *Script) List(pageNum, pageSize int, ext, name, sortField, sortOrder str
 		return nil, 0, err
 	}
 	err = db.Order(sortField + " " + sortOrder).Limit(pageSize).Offset((pageNum - 1) * pageSize).Find(&scripts).Error
-	for i := range scripts {
-		scripts[i].Path = ""
-	}
 	return scripts, cnt, err
 }
 
