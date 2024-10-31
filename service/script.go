@@ -12,27 +12,21 @@ func (s *Script) Create(script *model.Script) {
 	gobal.DB.Create(&script)
 }
 
-func (s *Script) First(id int64) *model.Script {
+func (s *Script) First(id int64)( *model.Script, error){
 	var script model.Script
 	err := gobal.DB.First(&script, id).Error
-	if err != nil {
-		return nil
-	}
-
-	return &script
+	return &script, err
 }
 
-func (s *Script) FindByHash(hash string) *model.Script {
+func (s *Script) FindByHash(hash string) (*model.Script, error) {
 	var script model.Script
 	err := gobal.DB.Where("hash =?", hash).First(&script).Error
-	if err != nil {
-		return nil
-	}
-	return &script
+	return &script, err
+
 }
 
 // 分页查询
-func (s *Script) List(pageNum, pageSize int, ext, name, sortField, sortOrder string) (scripts []model.Script, cnt int64, err error) {
+func (s *Script) List(pageNum, pageSize int, ext, name, sortField, sortOrder string) (scripts []model.ScriptWithUrl, cnt int64, err error) {
 	db := gobal.DB.Model(&model.Script{})
 	if ext!= "" {
 		db = db.Where("ext =?", ext)

@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"net/http"
 	"path/filepath"
 	"strconv"
 	"task-runner/gobal"
@@ -16,27 +15,42 @@ import (
 
 type Script struct{}
 
+func isSupportedFile(filename string) bool {
+	ext := filepath.Ext(filename)
+	switch ext {
+	case ".sh", ".exe":
+		return true
+	default:
+		return false
+	}
+}
+
 // 上传脚本文件
 func (s *Script) UploadScript(c *gin.Context) {
 	file, _ := c.FormFile("file")
 	description := c.PostForm("description")
+	// 验证文件类型
+	if !isSupportedFile(file.Filename) {
+		response.Fail(c, "不支持的文件类型", nil)
+		return
+	}
+
 	// 检查脚本是否存在，存在则返回已存在的脚本ID
 	// 计算文件哈希
 	hash, err := utils.GetMd5FromFile(file)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "计算文件哈希失败",
-		})
+		response.Fail(c, "计算文件哈希失败", err.Error())
 		return
 	}
 
 	// 存在
-	script := appService.Script.FindByHash(hash)
-	if script != nil {
-		c.JSON(200, gin.H{
-			"script_id": script.ID,
-			"msg":       "脚本已存在",
-		})
+	script, err := appService.Script.FindByHash(hash)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		response.Fail(c, "查询脚本失败", err.Error())
+		return
+	}
+	if script.ID!= 0 {
+		response.Success(c, "脚本已存在", gin.H{"script_id": script.ID})
 		return
 	}
 
@@ -45,9 +59,7 @@ func (s *Script) UploadScript(c *gin.Context) {
 	path := utils.GenPath(strconv.FormatInt(id, 10) + "-" + file.Filename)
 
 	if err := c.SaveUploadedFile(file, path); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "保存文件失败",
-		})
+		response.Fail(c, "保存文件失败", err.Error())
 		return
 	}
 
@@ -61,7 +73,7 @@ func (s *Script) UploadScript(c *gin.Context) {
 	}
 	appService.Script.Create(script)
 
-	c.JSON(200, gin.H{"script_id": script.ID})
+	response.Success(c, "上传成功", gin.H{"script_id": script.ID})
 }
 
 // 脚本列表
@@ -92,6 +104,9 @@ func (s *Script) ListScript(c *gin.Context) {
 	if err != nil {
 		response.Fail(c, "", err.Error())
 		return
+	}
+	for i := range scripts {
+		scripts[i].Url = genDownloadUrl(c.Request.Host, scripts[i].ID)
 	}
 	response.Success(c, "", response.PageResult{
 		List:     scripts,
@@ -132,15 +147,17 @@ func (s *Script) DownloadScript(c *gin.Context) {
 		response.Fail(c, "脚本id解析错误", err.Error())
 		return
 	}
-	script := appService.Script.First(scriptID)
-	if script == nil {
-		response.Fail(c, "脚本id不存在", )
+	script, err := appService.Script.First(scriptID)
+	if err != nil {
+		response.Fail(c, "脚本id不存在")
 		return
 	}
-
+	c.Header("Content-Disposition", "attachment; filename="+script.Name)
+	c.Header("Content-Type", "application/octet-stream")
 	c.File(script.Path)
+
 }
 
 func genDownloadUrl(hostName string, id int64) string {
-	return fmt.Sprintf("%s/download/%x", hostName, id)
+	return fmt.Sprintf("http://%s/script/download/%x", hostName, id)
 }

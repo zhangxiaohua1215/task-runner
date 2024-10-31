@@ -4,4 +4,6 @@ cmd/*.exe
 
 tmp/
 
+files-store/
+
 test.db

@@ -44,7 +44,11 @@ func (t *Task) ExecuteTask(c *gin.Context) {
 	}
 	gobal.DB.Create(&task)
 
-	script := appService.Script.First(scriptID)
+	script, err := appService.Script.First(scriptID)
+	if err != nil {
+		response.Fail(c, "找不到指定的脚本文件", err.Error())
+
+	}
 	// 加入任务队列
 	job.TaskQueue <- job.Task{
 		ID:        task.ID,
@@ -104,7 +108,7 @@ func (t *Task) DetailTask(c *gin.Context) {
 		return
 	}
 	var task model.TaskDetail
-	err = gobal.DB.Model(&model.Task{}).Joins("Script").First(&task, taskID).Error
+	err = gobal.DB.Model(&model.TaskDetail{}).Joins("Script").First(&task, taskID).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			response.Fail(c, "任务id不存在", err)

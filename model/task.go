@@ -16,6 +16,10 @@ type Task struct {
 	CompletedAt time.Time `json:"completed_at,omitempty"` // 任务完成时间
 }
 
+func (t *Task) TableName() string {
+	return "tasks"
+}
+
 // 任务详情
 type TaskDetail struct {
 	Task
