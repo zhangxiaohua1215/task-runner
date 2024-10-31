@@ -7,3 +7,7 @@ tmp/
 files-store/
 
 test.db
+
+input_files/
+
+output_files/

@@ -3,7 +3,7 @@ package utils
 import "testing"
 
 func TestMkdir(t *testing.T) {
-	got := GenPath("123.txt")
+	got := GenScriptPath(10, "test.sh")
 		
 	t.Log(got)
 }

@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"path"
 	"strconv"
 	"strings"
@@ -10,6 +9,7 @@ import (
 	"task-runner/job"
 	"task-runner/model"
 	"task-runner/utils"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -17,49 +17,63 @@ import (
 
 type Task struct{}
 
+// TODO 实现文件的输入，结果文件的输出
 // 执行任务
 func (t *Task) ExecuteTask(c *gin.Context) {
-	id := c.PostForm("script_id")
-
-	arg := c.PostFormArray("arg")
+	args := c.PostFormArray("arg")
 	name := c.PostForm("name")
-	input := c.PostForm("input")
-	fmt.Println(arg)
-	scriptID, err := strconv.ParseInt(id, 10, 64)
+	inputFile, err := c.FormFile("input")
 	if err != nil {
-		fmt.Println(err)
-
-		c.JSON(400, gin.H{"error": "invalid script_id"})
+		response.Fail(c, "文件上传失败", err)
+		return
+	}
+	scriptID, err := strconv.ParseInt(c.PostForm("script_id"), 10, 64)
+	if err != nil {
+		response.Fail(c, "脚本id解析错误", err)
+		return
+	}
+	// 验证脚本ID
+	script, err := appService.Script.First(scriptID)
+	if err != nil {
+		response.Fail(c, "找不到指定的脚本文件", err.Error())
+		return
+	}
+	// 保存输入文件到本地
+	taskID := utils.GenID()
+	desPath := utils.GenInputFilePath(taskID, inputFile.Filename)
+	if err := c.SaveUploadedFile(inputFile, desPath); err != nil {
+		response.Fail(c, "保存输入文件失败", err)
 		return
 	}
 
 	// 任务入库
 	task := model.Task{
-		ID:        utils.GenID(),
-		ScriptID:  scriptID,
-		Name:      name,
-		Arguments: strings.Join(arg, " "),
-		Status:    "pending",
-		Input:     input,
+		ID:            taskID,
+		ScriptID:      scriptID,
+		Name:          name,
+		Arguments:     strings.Join(args, " "),
+		Status:        "pending",
+		InputFileName: inputFile.Filename,
+		CreatedAt:     time.Now(),
 	}
 	gobal.DB.Create(&task)
 
-	script, err := appService.Script.First(scriptID)
+	f, err := inputFile.Open()
 	if err != nil {
-		response.Fail(c, "找不到指定的脚本文件", err.Error())
-
+		response.Fail(c, "打开输入文件失败", err)
+		return
 	}
 	// 加入任务队列
 	job.TaskQueue <- job.Task{
-		ID:        task.ID,
-		ScriptID:  script.ID,
-		Arguments: arg,
-		FilePath:  script.Path,
-		Ext:       path.Ext(script.Name),
-		Input:     input,
+		ID:            task.ID,
+		ScriptID:      script.ID,
+		Arguments:     args,
+		InputFileName: inputFile.Filename,
+		Ext:           path.Ext(script.Name),
+		Input:         f,
 	}
 
-	c.JSON(200, gin.H{"task_id": task.ID})
+	response.Success(c, "任务已加入队列", gin.H{"task_id": task.ID})
 }
 
 // 任务列表

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"task-runner/gobal"
 	"task-runner/model"
 	"time"
@@ -11,6 +12,10 @@ type Task struct {
 
 type TaskStatus string
 
+func (t TaskStatus) String() string {
+	return string(t)
+}
+
 const (
 	TaskStatusPending   TaskStatus = "pending"
 	TaskStatusRunning   TaskStatus = "running"
@@ -20,28 +25,39 @@ const (
 
 // 更新任务状态为正在执行
 func (t *Task) Start(taskID int64) {
-	gobal.DB.Model(&model.Task{ID: taskID}).Updates(map[string]any{"status": TaskStatusRunning, "started_at": time.Now()})
+	gobal.DB.Model(&model.Task{ID: taskID}).Updates(model.Task{
+		Status:    TaskStatusRunning.String(),
+		StartedAt: time.Now(),
+	})
 }
 
 // 更新任务状态为已完成
-func (t *Task) Complete(taskID int64, status TaskStatus, stdout []byte, exitCode int) {
-	gobal.DB.Model(&model.Task{ID: taskID}).Updates(map[string]any{
-		"status":       status,
-		"completed_at": time.Now(),
-		"output":      stdout,
+func (t *Task) Complete(taskID int64, status TaskStatus, exitCode int) {
+	var st time.Time
+	err := gobal.DB.Model(&model.Task{ID: taskID}).Select("started_at").Find(&st).Error
 
-		"exit_code":    exitCode,
+	if err != nil {
+		log.Fatalln(err)
+		return
+	}
+
+	now := time.Now()
+	gobal.DB.Model(&model.Task{ID: taskID}).Updates(model.Task{
+		Status:      TaskStatusCompleted.String(),
+		CompletedAt: now,
+		ExitCode:    exitCode,
+		ExecuteTime: now.Sub(st).Milliseconds(),
 	})
 }
 
 // 任务列表
 func (t *Task) List(pageNum, pageSize int, status, sortField, sortOrder string) (tasks []model.Task, cnt int64, err error) {
 	db := gobal.DB.Model(&tasks)
-	if status!= "" {
+	if status != "" {
 		db = db.Where("status = ?", status)
 	}
 	err = db.Count(&cnt).Error
-	if err!= nil {
+	if err != nil {
 		return nil, 0, err
 	}
 	if sortField == "" {

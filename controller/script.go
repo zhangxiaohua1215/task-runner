@@ -56,7 +56,7 @@ func (s *Script) UploadScript(c *gin.Context) {
 
 	// 不存在，保存文件
 	id := utils.GenID()
-	path := utils.GenPath(strconv.FormatInt(id, 10) + "-" + file.Filename)
+	path := utils.GenScriptPath(id, file.Filename)
 
 	if err := c.SaveUploadedFile(file, path); err != nil {
 		response.Fail(c, "保存文件失败", err.Error())
@@ -159,5 +159,5 @@ func (s *Script) DownloadScript(c *gin.Context) {
 }
 
 func genDownloadUrl(hostName string, id int64) string {
-	return fmt.Sprintf("http://%s/script/download/%x", hostName, id)
+	return fmt.Sprintf("http://%s/script/%x", hostName, id)
 }

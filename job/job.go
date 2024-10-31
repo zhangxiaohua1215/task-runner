@@ -1,20 +1,24 @@
 package job
 
 import (
-	"bytes"
+	"io"
+	"log"
+	"os"
 	"os/exec"
 	"task-runner/service"
+	"task-runner/utils"
 )
 
 var TaskQueue = make(chan Task, 1000)
 
 type Task struct {
-	ID        int64
-	ScriptID  int64
-	Arguments []string
-	FilePath  string
-	Ext       string
-	Input     string
+	ID            int64
+	ScriptID      int64
+	Arguments     []string
+	ScriptPath    string
+	InputFileName string
+	Ext           string
+	Input         io.Reader
 	// 输出参数
 	// StartedAt   time.Time
 	// CompletedAt time.Time
@@ -23,7 +27,7 @@ type Task struct {
 }
 
 type Executor interface {
-	Execute(scriptPath string, args []string, stdin []byte) (stdout []byte, exitCode int)
+	Execute(scriptPath string, args []string, stdin io.Reader, stdout io.Writer) (exitCode int)
 }
 
 func NewExecutor(ext string) Executor {
@@ -42,17 +46,18 @@ func NewExecutor(ext string) Executor {
 
 type exeExecutor struct{}
 
-func (e *exeExecutor) Execute(scriptPath string, args []string, stdin []byte) (stdout []byte, exitCode int) {
+func (e *exeExecutor) Execute(scriptPath string, args []string, stdin io.Reader, stdout io.Writer) (exitCode int) {
 	// 执行脚本
 	cmd := exec.Command(scriptPath, args...)
-	cmd.Stdin = bytes.NewBuffer(stdin)
+	cmd.Stdin = stdin
+	cmd.Stdout = stdout
 
-	stdout, _ = cmd.Output()
-
+	// 执行脚本
+	_ = cmd.Run()
 	// 执行结果
 	exitCode = cmd.ProcessState.ExitCode()
 
-	return stdout, exitCode
+	return exitCode
 
 }
 
@@ -62,7 +67,16 @@ func worker() {
 		// 更新任务状态为正在执行
 		service.AppServiceGroup.Start(t.ID)
 
-		stdout, exeCode := executor.Execute(t.FilePath, t.Arguments, []byte(t.Input))
+		// 创建输出文件
+		dst := utils.GenResultFilePath(t.ID)
+		f, err := os.Create(dst)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		defer f.Close()
+
+		// 执行脚本
+		exeCode := executor.Execute(t.ScriptPath, t.Arguments, t.Input, f)
 
 		status := service.TaskStatusCompleted
 		if exeCode != 0 {
@@ -70,7 +84,7 @@ func worker() {
 		}
 
 		// 更新任务状态为已完成
-		service.AppServiceGroup.Complete(t.ID, status, stdout, exeCode)
+		service.AppServiceGroup.Complete(t.ID, status, exeCode)
 	}
 }
 
