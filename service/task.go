@@ -32,9 +32,9 @@ func (t *Task) Start(taskID int64) {
 }
 
 // 更新任务状态为已完成
-func (t *Task) Complete(taskID int64, status TaskStatus, exitCode int) {
-	var st time.Time
-	err := gobal.DB.Model(&model.Task{ID: taskID}).Select("started_at").Find(&st).Error
+func (t *Task) Complete(taskID int64, status TaskStatus, exitCode int, url string) {
+	tk := model.Task{ID: taskID}
+	err := gobal.DB.Select("started_at").First(&tk).Error
 
 	if err != nil {
 		log.Fatalln(err)
@@ -42,11 +42,12 @@ func (t *Task) Complete(taskID int64, status TaskStatus, exitCode int) {
 	}
 
 	now := time.Now()
-	gobal.DB.Model(&model.Task{ID: taskID}).Updates(model.Task{
-		Status:      TaskStatusCompleted.String(),
-		CompletedAt: now,
-		ExitCode:    exitCode,
-		ExecuteTime: now.Sub(st).Milliseconds(),
+	gobal.DB.Model(&model.Task{ID: taskID}).Updates(map[string]any{
+		"status":      TaskStatusCompleted.String(),
+		"completed_at": now,
+		"exit_code":    exitCode,
+		"execute_time": now.Sub(tk.StartedAt).Milliseconds(),
+		"result_url":   url,
 	})
 }
 

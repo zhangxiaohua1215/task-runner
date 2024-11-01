@@ -15,11 +15,11 @@ bin = "tmp/main"
 # 监听以下文件扩展名的文件.
 include_ext = ["go", "tpl", "tmpl", "html"]
 # 忽略这些文件扩展名或目录
-exclude_dir = ["assets", "tmp", "upload", "output_files",  "input_files"]
+exclude_dir = ["assets", "tmp", "upload", "result", "txt"]
 # 监听以下指定目录的文件
 include_dir = []
 # 排除以下文件
-exclude_file = []
+exclude_file = ["test.db"]
 # 如果文件更改过于频繁，则没有必要在每次更改时都触发构建。可以设置触发构建的延迟时间
 delay = 2000 # ms
 # 发生构建错误时，停止运行旧的二进制文件。

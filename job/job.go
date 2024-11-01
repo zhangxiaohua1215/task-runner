@@ -1,10 +1,12 @@
 package job
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"task-runner/service"
 	"task-runner/utils"
 )
@@ -19,11 +21,6 @@ type Task struct {
 	InputFileName string
 	Ext           string
 	Input         io.Reader
-	// 输出参数
-	// StartedAt   time.Time
-	// CompletedAt time.Time
-	// StdOut     []byte
-	// ExitedCode int
 }
 
 type Executor interface {
@@ -47,19 +44,21 @@ func NewExecutor(ext string) Executor {
 type exeExecutor struct{}
 
 func (e *exeExecutor) Execute(scriptPath string, args []string, stdin io.Reader, stdout io.Writer) (exitCode int) {
-	// 执行脚本
+
 	cmd := exec.Command(scriptPath, args...)
 	cmd.Stdin = stdin
 	cmd.Stdout = stdout
 
 	// 执行脚本
-	_ = cmd.Run()
+	err := cmd.Run()
+	if err != nil {
+		log.Fatalln(err)
+	}
 	// 执行结果
-	exitCode = cmd.ProcessState.ExitCode()
-
-	return exitCode
-
+	return cmd.ProcessState.ExitCode()
 }
+
+// 根据id创建输出文件id, host => f, 
 
 func worker() {
 	for t := range TaskQueue {
@@ -69,14 +68,18 @@ func worker() {
 
 		// 创建输出文件
 		dst := utils.GenResultFilePath(t.ID)
+		err := os.MkdirAll(filepath.Dir(dst), os.ModePerm)
+		if err != nil {
+			log.Println(err)
+		}
 		f, err := os.Create(dst)
 		if err != nil {
 			log.Fatalln(err)
 		}
-		defer f.Close()
-
+		fileUrl := fmt.Sprintf("http://localhost:8080/%s", dst)
 		// 执行脚本
 		exeCode := executor.Execute(t.ScriptPath, t.Arguments, t.Input, f)
+		f.Close()
 
 		status := service.TaskStatusCompleted
 		if exeCode != 0 {
@@ -84,7 +87,7 @@ func worker() {
 		}
 
 		// 更新任务状态为已完成
-		service.AppServiceGroup.Complete(t.ID, status, exeCode)
+		service.AppServiceGroup.Complete(t.ID, status, exeCode, fileUrl)
 	}
 }
 

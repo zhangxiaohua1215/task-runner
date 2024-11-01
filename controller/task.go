@@ -39,16 +39,16 @@ func (t *Task) ExecuteTask(c *gin.Context) {
 		return
 	}
 	// 保存输入文件到本地
-	taskID := utils.GenID()
-	desPath := utils.GenInputFilePath(taskID, inputFile.Filename)
-	if err := c.SaveUploadedFile(inputFile, desPath); err != nil {
-		response.Fail(c, "保存输入文件失败", err)
-		return
-	}
+	// taskID := utils.GenID()
+	// desPath := utils.GenInputFilePath(taskID, inputFile.Filename)
+	// if err := c.SaveUploadedFile(inputFile, desPath); err != nil {
+	// 	response.Fail(c, "保存输入文件失败", err)
+	// 	return
+	// }
 
 	// 任务入库
 	task := model.Task{
-		ID:            taskID,
+		ID:            utils.GenID(),
 		ScriptID:      scriptID,
 		Name:          name,
 		Arguments:     strings.Join(args, " "),
@@ -56,17 +56,20 @@ func (t *Task) ExecuteTask(c *gin.Context) {
 		InputFileName: inputFile.Filename,
 		CreatedAt:     time.Now(),
 	}
-	gobal.DB.Create(&task)
+	gobal.DB.Omit("CompletedAt", "ExitCode", "ExecuteTime", "StartedAt").Create(&task)
 
 	f, err := inputFile.Open()
 	if err != nil {
 		response.Fail(c, "打开输入文件失败", err)
 		return
 	}
+	defer f.Close()
+	
 	// 加入任务队列
 	job.TaskQueue <- job.Task{
 		ID:            task.ID,
 		ScriptID:      script.ID,
+		ScriptPath:    script.Path,
 		Arguments:     args,
 		InputFileName: inputFile.Filename,
 		Ext:           path.Ext(script.Name),

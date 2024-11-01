@@ -28,8 +28,9 @@ func GenInputFilePath(taskID int64, fileName string) string {
 
 // 生成输出文件路径
 func GenResultFilePath(taskID int64) string {
-	return filepath.Join("output_files", strconv.FormatInt(taskID, 16)+"-result.txt")
+	return filepath.Join("result", strconv.FormatInt(taskID, 10)+"-result.txt")
 }
+
 
 
 // 通用生成文件路径， 会根据时间生成文件夹， 文件夹格式为 2006/01/02
